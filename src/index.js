@@ -21,7 +21,6 @@ class Tetris {
   create() {
     this.board = new Board(10, 20);
     this.board.addPiece();
-    this.board.drawPiece();
     this.drawOutline();
   }
 
@@ -41,10 +40,20 @@ class Tetris {
     this.clearBoxes();
 
     this.board.forEach((x, y, val) => {
-      if(val === 1) {
+      if(val == 1) {
         this.drawBox(x * this.boxSize, y * this.boxSize);
       }
     });
+
+    if(this.board.piece) {
+      this.board.piece.forEach((x, y, val) => {
+        if(val == 1 ) {
+          const gridX = x + this.board.piece.position.x; 
+          const gridY = y + this.board.piece.position.y;
+          this.drawBox(gridX * this.boxSize, gridY * this.boxSize);
+        }
+      });
+    }
   }
 
   drawOutline() {
@@ -83,6 +92,7 @@ class Board {
   constructor(xSize, ySize) {
     this.xSize = xSize;
     this.ySize = ySize;
+    this.piece = null;
     this.grid = [];
 
     this.forEach((x, y) => {
@@ -97,25 +107,6 @@ class Board {
     this.piece = new Piece(3);
   }
 
-  drawPiece() {
-    this.piece.forEach((x, y, value) => {
-      if(value == 1) {
-        const gridX = x + this.piece.position.x;
-        const gridY = y + this.piece.position.y;
-        this.grid[gridX][gridY] = 1;
-      }
-    });
-  }
-
-  removePiece() {
-    this.piece.forEach((x, y, value) => {
-      if(value == 1) {
-        const gridX = x + this.piece.position.x;
-        const gridY = y + this.piece.position.y;
-        this.grid[gridX][gridY] = 0;
-      }
-    });
-  }
 
   testMove(xOffset, yOffset) {
     let passed = true;
@@ -134,18 +125,20 @@ class Board {
   }
 
   movePieceDown() {
-    this.removePiece();
-
     if(this.testMove(0, 1)) {
       this.piece.position.y += 1;
-      this.drawPiece();
     } else {
-      this.drawPiece();
+      this.piece.forEach((x, y, value) => {
+        if(value == 1) {
+          const gridX = x + this.piece.position.x;
+          const gridY = y + this.piece.position.y;
+          this.grid[gridX][gridY] = 1;
+        }
+      });
       this.addPiece();
       if(!this.testMove(0, 0)) {
         throw new Error("game over");
       };
-      this.drawPiece();
     }
   }
 
@@ -204,15 +197,16 @@ class Piece {
         [1, 0, 0, 0],
         [1, 1, 0, 0],
         [1, 0, 0, 0],
+      ], [ /// square
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [1, 1, 0, 0],
+        [1, 1, 0, 0],
       ],
     ];
 
-    this.gridLayout = this.getRandomPiece(pieces);
+    this.gridLayout = getRandomValue(pieces);
     this.position = {x,y: 0};
-  }
-
-  getRandomPiece(pieces) {
-    return pieces[Math.floor(Math.random() * pieces.length)];
   }
 
   forEach(func) {
@@ -222,6 +216,10 @@ class Piece {
       }
     }
   }
+}
+
+function getRandomValue(values) {
+  return values[Math.floor(Math.random() * values.length)];
 }
 
 new Tetris();
