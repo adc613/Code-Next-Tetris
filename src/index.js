@@ -102,7 +102,7 @@ class Board {
       if(value == 1) {
         const gridX = x + this.piece.position.x;
         const gridY = y + this.piece.position.y;
-        if(gridX < this.xSize && gridY < this.ySize && value == 1) this.grid[gridX][gridY] = 1;
+        this.grid[gridX][gridY] = 1;
       }
     });
   }
@@ -112,7 +112,7 @@ class Board {
       if(value == 1) {
         const gridX = x + this.piece.position.x;
         const gridY = y + this.piece.position.y;
-        if(gridX < this.xSize && gridY < this.ySize && value == 1) this.grid[gridX][gridY] = 0;
+        this.grid[gridX][gridY] = 0;
       }
     });
   }
@@ -121,8 +121,8 @@ class Board {
     let passed = true;
     this.piece.forEach((x, y, value) => {
       if(value === 1) {
-        const gridX = x + this.piece.position.x;
-        const gridY = y + this.piece.position.y;
+        const gridX = x + xOffset + this.piece.position.x;
+        const gridY = y + yOffset + this.piece.position.y;
         if(gridX >= this.grid.length
           || gridY >= this.grid[gridX].length
           || this.grid[gridX][gridY] == 1) {
