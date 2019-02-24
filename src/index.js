@@ -67,9 +67,9 @@ class Tetris {
   drawOutline() {
     let box = this.game.add.graphics(this.boardLocation.x, this.boardLocation.y);
     box.lineStyle(2, 0xfffff0, 1);
-    box.lineTo(this.boxSize * 10, 0);
-    box.lineTo(this.boxSize * 10, this.boxSize * 20);
-    box.lineTo(0, this.boxSize * 20);
+    box.lineTo(this.boxSize * this.board.size.x, 0);
+    box.lineTo(this.boxSize * this.board.size.x, this.boxSize * this.board.size.y);
+    box.lineTo(0, this.boxSize * this.board.size.y);
     box.lineTo(0, 0);
     box.endFill();
   }
@@ -98,9 +98,7 @@ class Tetris {
 
 class Board {
   constructor(xSize, ySize) {
-    this.xSize = xSize;
-    this.ySize = ySize;
-
+    this.size = {x: xSize, y: ySize};
     this.initializeGrid();
   }
 
@@ -110,8 +108,8 @@ class Board {
       if(value === 1) {
         const gridX = x + xOffset + tetromino.position.x;
         const gridY = y + yOffset + tetromino.position.y;
-        if(gridX >= this.xSize 
-          || gridY >= this.ySize
+        if(gridX >= this.size.x 
+          || gridY >= this.size.y
           || gridX < 0
           || gridY < 0
           || this.grid[gridX][gridY] == 1) {
@@ -147,8 +145,8 @@ class Board {
   }
 
   forEach(func) {
-    for(let x = 0; x < this.xSize; x++) {
-      for(let y = 0; y < this.ySize; y++) {
+    for(let x = 0; x < this.size.x; x++) {
+      for(let y = 0; y < this.size.y; y++) {
         if(this.grid[x] && this.grid[x][y]) {
           func(x, y, this.grid[x][y]);
         } else {
