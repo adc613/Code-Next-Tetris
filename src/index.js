@@ -10,6 +10,7 @@ class Tetris {
         update: () => this.update() },
     );
     this.boxSize = 30;
+    this.boardLocation = {x: 200, y:100};
     this.boxes = [];
     this.frame = 1;
   }
@@ -21,6 +22,7 @@ class Tetris {
     this.board = new Board();
     this.board.addPiece();
     this.board.drawPiece();
+    this.drawOutline();
   }
 
   update() {
@@ -39,13 +41,24 @@ class Tetris {
     this.clearBoxes();
 
     this.board.forEach((x, y, val) => {
-      if(val === 0) {
+      if(val === 1) {
         this.drawBox(x * this.boxSize, y * this.boxSize);
       }
     });
   }
 
+  drawOutline() { let box = this.game.add.graphics(this.boardLocation.x, this.boardLocation.y);
+    box.lineStyle(2, 0xfffff0, 1);
+    box.lineTo(this.boxSize * 10, 0);
+    box.lineTo(this.boxSize * 10, this.boxSize * 20);
+    box.lineTo(0, this.boxSize * 20);
+    box.lineTo(0, 0);
+    box.endFill();
+  }
+
   drawBox(x, y) {
+    x += this.boardLocation.x;
+    y += this.boardLocation.y;
     let box = this.game.add.graphics(x, y);
 
     box.beginFill(0xFF3300);
