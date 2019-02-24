@@ -20,23 +20,33 @@ class Tetris {
 
   create() {
     this.board = new Board(10, 20);
-    this.board.addPiece();
+    this.tetromino = new Tetromino(3);
     this.drawOutline();
   }
 
   update() {
     this.frame += 1;
     if(this.frame % 5 == 1) {
-      this.board.movePieceDown();
+      this.moveTetrominoDown();
     }
 
-    this.redraw();
+    this.draw();
   }
 
-  movePieces() {
+  moveTetrominoDown() {
+    if(this.board.testBoundaries(this.tetromino, 0, 1)) {
+      this.tetromino.position.y += 1;
+    } else {
+      this.board.addTetromino(this.tetromino);
+
+      this.tetromino = new Tetromino(3);
+      if(!this.board.testBoundaries(this.tetromino, 0, 0)) {
+        throw new Error("game over");
+      };
+    }
   }
 
-  redraw() {
+  draw() {
     this.clearBoxes();
 
     this.board.forEach((x, y, val) => {
@@ -45,15 +55,13 @@ class Tetris {
       }
     });
 
-    if(this.board.piece) {
-      this.board.piece.forEach((x, y, val) => {
-        if(val == 1 ) {
-          const gridX = x + this.board.piece.position.x; 
-          const gridY = y + this.board.piece.position.y;
-          this.drawBox(gridX * this.boxSize, gridY * this.boxSize);
-        }
-      });
-    }
+    this.tetromino.forEach((x, y, val) => {
+      if(val == 1 ) {
+        const gridX = x + this.tetromino.position.x; 
+        const gridY = y + this.tetromino.position.y;
+        this.drawBox(gridX * this.boxSize, gridY * this.boxSize);
+      }
+    });
   }
 
   drawOutline() {
@@ -92,30 +100,20 @@ class Board {
   constructor(xSize, ySize) {
     this.xSize = xSize;
     this.ySize = ySize;
-    this.piece = null;
-    this.grid = [];
 
-    this.forEach((x, y) => {
-      if(y == 0) {
-        this.grid[x] = [];
-      }
-      this.grid[x][y] = 0;
-    });
+    this.initializeGrid();
   }
 
-  addPiece() {
-    this.piece = new Piece(3);
-  }
-
-
-  testMove(xOffset, yOffset) {
+  testBoundaries(tetromino, xOffset, yOffset) {
     let passed = true;
-    this.piece.forEach((x, y, value) => {
+    tetromino.forEach((x, y, value) => {
       if(value === 1) {
-        const gridX = x + xOffset + this.piece.position.x;
-        const gridY = y + yOffset + this.piece.position.y;
-        if(gridX >= this.grid.length
-          || gridY >= this.grid[gridX].length
+        const gridX = x + xOffset + tetromino.position.x;
+        const gridY = y + yOffset + tetromino.position.y;
+        if(gridX >= this.xSize 
+          || gridY >= this.ySize
+          || gridX < 0
+          || gridY < 0
           || this.grid[gridX][gridY] == 1) {
           passed = false;
         }
@@ -124,47 +122,44 @@ class Board {
     return passed;
   }
 
-  movePieceDown() {
-    if(this.testMove(0, 1)) {
-      this.piece.position.y += 1;
-    } else {
-      this.piece.forEach((x, y, value) => {
-        if(value == 1) {
-          const gridX = x + this.piece.position.x;
-          const gridY = y + this.piece.position.y;
-          this.grid[gridX][gridY] = 1;
-        }
-      });
-      this.addPiece();
-      if(!this.testMove(0, 0)) {
-        throw new Error("game over");
-      };
-    }
+  addTetromino(tetromino) {
+    tetromino.forEach((x, y, value) => {
+      if(value == 1) {
+        const gridX = x + tetromino.position.x;
+        const gridY = y + tetromino.position.y;
+        this.setValue(gridX, gridY, 1);
+      }
+    });
   }
 
-  dropPiece() {
+  setValue(gridX, gridY, value) {
+    this.grid[gridX][gridY] = value;
   }
 
-  movePieceLeft() {
-  }
-
-  movePieceRight() {
-  }
-
-  createBoard() {
+  initializeGrid() {
+    this.grid = [];
+    this.forEach((x, y) => {
+      if(y == 0) {
+        this.grid[x] = [];
+      }
+      this.grid[x][y] = 0;
+    });
   }
 
   forEach(func) {
     for(let x = 0; x < this.xSize; x++) {
       for(let y = 0; y < this.ySize; y++) {
-        if(this.grid[x] && this.grid[x][y]) func(x, y, this.grid[x][y]);
-        else func(x,y);
+        if(this.grid[x] && this.grid[x][y]) {
+          func(x, y, this.grid[x][y]);
+        } else {
+          func(x,y);
+        }
       }
     }
   }
 }
 
-class Piece {
+class Tetromino {
   constructor(x) {
     const pieces = [
       [ // L
@@ -172,22 +167,22 @@ class Piece {
         [1, 0, 0, 0],
         [1, 0, 0, 0],
         [1, 1, 0, 0],
-      ], [ // L inverted
+      ], [ // J
         [0, 0, 0, 0],
         [0, 1, 0, 0],
         [0, 1, 0, 0],
         [1, 1, 0, 0],
-      ], [ // long
+      ], [ // I
         [1, 0, 0, 0],
         [1, 0, 0, 0],
         [1, 0, 0, 0],
         [1, 0, 0, 0],
+      ], [ // S
+        [0, 0, 0, 0],
+        [1, 0, 0, 0],
+        [1, 1, 0, 0],
+        [0, 1, 0, 0],
       ], [ // Z
-        [0, 0, 0, 0],
-        [1, 0, 0, 0],
-        [1, 1, 0, 0],
-        [0, 1, 0, 0],
-      ], [ // Z inverted
         [0, 0, 0, 0],
         [0, 1, 0, 0],
         [1, 1, 0, 0],
@@ -197,7 +192,7 @@ class Piece {
         [1, 0, 0, 0],
         [1, 1, 0, 0],
         [1, 0, 0, 0],
-      ], [ /// square
+      ], [ /// O
         [0, 0, 0, 0],
         [0, 0, 0, 0],
         [1, 1, 0, 0],
