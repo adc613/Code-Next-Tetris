@@ -1,8 +1,10 @@
 class Tetris {
   constructor() {
+    let width = 800;
+    let height = 800;
     this.game = new Phaser.Game(
-      1024,
-      800,
+      width,
+      height,
       Phaser.AUTO,
       'phaser-example',
       { preload: () => this.preload(),
@@ -10,7 +12,11 @@ class Tetris {
         update: () => this.update() },
     );
     this.boxSize = 30;
-    this.boardLocation = {x: 200, y:100};
+    this.framesPerMove = 60;
+
+    const x = (width - this.boxSize * 10) / 2;
+    const y = (height - this.boxSize * 20) / 2;
+    this.boardLocation = {x: x, y: y};
     this.boxes = [];
     this.frame = 1;
   }
@@ -22,11 +28,29 @@ class Tetris {
     this.board = new Board(10, 20);
     this.tetromino = new Tetromino(3);
     this.drawOutline();
+
+    let left = this.game.input.keyboard.addKey(Phaser.Keyboard.LEFT);
+    left.onDown.add(() => this.moveLeft());
+
+    let right = this.game.input.keyboard.addKey(Phaser.Keyboard.RIGHT);
+    right.onDown.add(() => this.moveRight());
+
+    let down = this.game.input.keyboard.addKey(Phaser.Keyboard.DOWN);
+    down.onDown.add(() => this.moveDown());
+
+    let space = this.game.input.keyboard.addKey(Phaser.Keyboard.SPACEBAR);
+    space.onDown.add(() => this.drop());
+
+    let a = this.game.input.keyboard.addKey(Phaser.Keyboard.A);
+    a.onDown.add(() => this.rotateLeft());
+
+    let d = this.game.input.keyboard.addKey(Phaser.Keyboard.D);
+    d.onDown.add(() => this.rotateRight());
   }
 
   update() {
     this.frame += 1;
-    if(this.frame % 5 == 1) {
+    if(this.frame % this.framesPerMove == 1) {
       this.moveTetrominoDown();
     }
 
@@ -37,13 +61,63 @@ class Tetris {
     if(this.board.testBoundaries(this.tetromino, 0, 1)) {
       this.tetromino.position.y += 1;
     } else {
-      this.board.addTetromino(this.tetromino);
 
-      this.tetromino = new Tetromino(3);
+      this.insertNewTetromino();
+
       if(!this.board.testBoundaries(this.tetromino, 0, 0)) {
         throw new Error("game over");
       };
     }
+  }
+
+  insertNewTetromino() {
+    this.board.addTetromino(this.tetromino);
+    this.board.clearRows();
+    this.tetromino = new Tetromino(3);
+  }
+
+  rotateRight() {
+    this.tetromino.rotateRight();
+    if(!this.board.testBoundaries(this.tetromino, 0, 0)) {
+      this.tetromino.rotateLeft();
+    }
+  }
+
+  rotateLeft() {
+    this.tetromino.rotateLeft();
+    if(!this.board.testBoundaries(this.tetromino, 0, 0)) {
+      this.tetromino.rotateRight();
+    }
+  }
+
+  moveRight() {
+    if(this.board.testBoundaries(this.tetromino, 1, 0)) {
+      this.tetromino.position.x += 1;
+    }
+  }
+
+  moveLeft() {
+    if(this.board.testBoundaries(this.tetromino, -1, 0)) {
+      this.tetromino.position.x -= 1;
+    }
+  }
+
+  moveDown() {
+    if(this.board.testBoundaries(this.tetromino, 0, 1)) {
+      this.tetromino.position.y += 1;
+    }
+  }
+
+  drop() {
+    let dropValue = 0;
+    for(let i = 0; i < this.board.size.y; i++) {
+      if(this.board.testBoundaries(this.tetromino, 0, i)) {
+        dropValue = i;
+      } else {
+        break;
+      }
+    }
+    this.tetromino.position.y += dropValue;
   }
 
   draw() {
@@ -130,6 +204,39 @@ class Board {
     });
   }
 
+  clearRows() {
+    let count = 0;
+    let y = this.size.y - 1;
+    while(y >= 0) {
+      let passed = true;
+      for(let x = 0; x < this.size.x; x++) {
+        if(this.grid[x][y] == 0) {
+          passed = false;
+        }
+      }
+      if(passed) {
+        count += 1;
+        this.removeRow(y);
+      } else {
+        y -= 1;
+      }
+    }
+
+    return count;
+  }
+
+  removeRow(y) {
+    for(; y >= 0; y--) {
+      for(let x = 0; x < this.size.x; x++) {
+        if(y - 1 >= 0) {
+          this.grid[x][y] = this.grid[x][y - 1];
+        } else {
+          this.grid[x][y] = 0;
+        }
+      }
+    }
+  }
+
   setValue(gridX, gridY, value) {
     this.grid[gridX][gridY] = value;
   }
@@ -144,6 +251,18 @@ class Board {
     });
   }
 
+  forEachReverse(func) {
+    for(let x = 0; x < this.size.x; x++) {
+      for(let y = this.size.y; y >= 0; y--) {
+        if(this.grid[x] && this.grid[x][y]) {
+          func(x, y, this.grid[x][y]);
+        } else {
+          func(x,y);
+        }
+      }
+    }
+  }
+
   forEach(func) {
     for(let x = 0; x < this.size.x; x++) {
       for(let y = 0; y < this.size.y; y++) {
@@ -155,61 +274,167 @@ class Board {
       }
     }
   }
+
+  forEachRow(func) {
+    const rows = [];
+    this.forEach((x, y, value) => {
+      if(x === 0) {
+        rows[y] = [];
+      }
+      rows[y][x] = value;
+    });
+    for(let x = 0; x < rows.length; x++) {
+      func(x, rows[x]);
+    }
+  }
 }
 
 class Tetromino {
   constructor(x) {
-    const pieces = [
-      [ // L
-        [0, 0, 0, 0],
-        [1, 0, 0, 0],
-        [1, 0, 0, 0],
-        [1, 1, 0, 0],
-      ], [ // J
-        [0, 0, 0, 0],
-        [0, 1, 0, 0],
-        [0, 1, 0, 0],
-        [1, 1, 0, 0],
-      ], [ // I
-        [1, 0, 0, 0],
-        [1, 0, 0, 0],
-        [1, 0, 0, 0],
-        [1, 0, 0, 0],
-      ], [ // S
-        [0, 0, 0, 0],
-        [1, 0, 0, 0],
-        [1, 1, 0, 0],
-        [0, 1, 0, 0],
-      ], [ // Z
-        [0, 0, 0, 0],
-        [0, 1, 0, 0],
-        [1, 1, 0, 0],
-        [1, 0, 0, 0],
-      ], [ /// T
-        [0, 0, 0, 0],
-        [1, 0, 0, 0],
-        [1, 1, 0, 0],
-        [1, 0, 0, 0],
-      ], [ /// O
-        [0, 0, 0, 0],
-        [0, 0, 0, 0],
-        [1, 1, 0, 0],
-        [1, 1, 0, 0],
-      ],
-    ];
-
-    this.gridLayout = getRandomValue(pieces);
+    this.gridLayout = getRandomValue(TETROMINOS);
     this.position = {x,y: 0};
+    this.rotation = 0;
+  }
+
+  rotateRight() {
+    if(this.rotation == 3) {
+      this.rotation = 0;
+    } else {
+      this.rotation += 1;
+    }
+  }
+
+  rotateLeft() {
+    if(this.rotation == 0) {
+      this.rotation = 3;
+    } else {
+      this.rotation -= 1;
+    }
   }
 
   forEach(func) {
-    for(let x = 0; x < this.gridLayout.length; x++) {
-      for(let y = 0; y < this.gridLayout[x].length; y++) {
-        func(x, y, this.gridLayout[x][y]);
+    const gridLayout = this.gridLayout[this.rotation];
+    for(let x = 0; x < gridLayout.length; x++) {
+      for(let y = 0; y < gridLayout[x].length; y++) {
+        func(x, y, gridLayout[x][y]);
       }
     }
   }
 }
+
+const T1 =[
+  [1, 0],
+  [1, 1],
+  [1, 0],
+];
+
+const T2 =[
+  [1, 1, 1],
+  [0, 1, 0],
+];
+
+const T3 =[
+  [0, 1],
+  [1, 1],
+  [0, 1],
+];
+
+const T4 = [
+  [0, 1, 0],
+  [1, 1, 1],
+];
+
+const L1 =[
+  [1, 0],
+  [1, 0],
+  [1, 1],
+];
+
+const L2 =[
+  [1, 1, 1],
+  [1, 0, 0],
+];
+
+const L3 =[
+  [1, 1],
+  [0, 1],
+  [0, 1],
+];
+
+const L4 =[
+  [0, 0, 1],
+  [1, 1, 1],
+];
+
+const J1 = [
+  [0, 1],
+  [0, 1],
+  [1, 1],
+];
+
+const J2 = [
+  [1, 0, 0],
+  [1, 1, 1],
+];
+
+const J3 = [
+  [1, 1],
+  [1, 0],
+  [1, 0],
+];
+
+const J4 = [
+  [1, 1, 1],
+  [0, 0, 1],
+];
+
+const I1 = [
+  [1],
+  [1],
+  [1],
+  [1],
+];
+
+const I2 = [
+  [1, 1, 1, 1],
+];
+
+const S1 = [
+  [1, 0],
+  [1, 1],
+  [0, 1],
+];
+
+const S2 = [
+  [0, 1, 1],
+  [1, 1, 0],
+];
+
+const Z1 = [
+  [0, 1],
+  [1, 1],
+  [1, 0],
+];
+
+const Z2 = [
+  [1, 1, 0],
+  [0, 1, 1],
+];
+
+const O1 = [
+  [1, 1],
+  [1, 1],
+];
+
+const TETROMINOS = [
+  [L1, L2, L3, L4],
+  [J1, J2, J3, J4],
+  [I1, I2, I1, I2],
+  [S1, S2, S1, S2],
+  [Z1, Z2, Z1, Z2],
+  [O1, O1, O1, O1],
+  [T1, T2, T3, T4],
+];
 
 function getRandomValue(values) {
   return values[Math.floor(Math.random() * values.length)];
