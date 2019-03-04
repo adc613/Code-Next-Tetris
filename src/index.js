@@ -19,7 +19,7 @@ class Tetris {
   }
 
   create() {
-    this.board = new Board();
+    this.board = new Board(10, 20);
     this.board.addPiece();
     this.board.drawPiece();
     this.drawOutline();
@@ -47,7 +47,8 @@ class Tetris {
     });
   }
 
-  drawOutline() { let box = this.game.add.graphics(this.boardLocation.x, this.boardLocation.y);
+  drawOutline() {
+    let box = this.game.add.graphics(this.boardLocation.x, this.boardLocation.y);
     box.lineStyle(2, 0xfffff0, 1);
     box.lineTo(this.boxSize * 10, 0);
     box.lineTo(this.boxSize * 10, this.boxSize * 20);
@@ -79,78 +80,64 @@ class Tetris {
 }
 
 class Board {
-  constructor() {
+  constructor(xSize, ySize) {
+    this.xSize = xSize;
+    this.ySize = ySize;
     this.grid = [];
-    for(let x = 0; x < 10; x++) {
-      this.grid[x] = [];
-      for(let y = 0; y < 20; y++) {
-        this.grid[x][y] = 0;
-      }
-    }
-  }
 
-  getGrid() {
-    return this.grid;
-  }
-
-  forEach(func) {
-    for(let x = 0; x < 10; x++) {
-      for(let y = 0; y < 20; y++) {
-        func(x, y, this.grid[x][y]);
+    this.forEach((x, y) => {
+      if(y == 0) {
+        this.grid[x] = [];
       }
-    }
+      this.grid[x][y] = 0;
+    });
   }
 
   addPiece() {
-    this.piece = new Piece();
+    this.piece = new Piece(3);
   }
 
   drawPiece() {
-    for(let i = 0; i < this.piece.piece.length; i++) {
-      for(let j = 0; j < this.piece.piece[i].length; j++) {
-        if(this.piece.piece[i][j] == 1) {
-          const x = i + this.piece.x;
-          const y = j + this.piece.y;
-          this.grid[x][y] = 1;
-        }
+    this.piece.forEach((x, y, value) => {
+      if(value == 1) {
+        const gridX = x + this.piece.position.x;
+        const gridY = y + this.piece.position.y;
+        this.grid[gridX][gridY] = 1;
       }
-    }
+    });
   }
 
   removePiece() {
-    for(let i = 0; i < this.piece.piece.length; i++) {
-      for(let j = 0; j < this.piece.piece[i].length; j++) {
-        if(this.piece.piece[i][j] == 1) {
-          const x = i + this.piece.x;
-          const y = j + this.piece.y;
-          this.grid[x][y] = 0;
-        }
+    this.piece.forEach((x, y, value) => {
+      if(value == 1) {
+        const gridX = x + this.piece.position.x;
+        const gridY = y + this.piece.position.y;
+        this.grid[gridX][gridY] = 0;
       }
-    }
+    });
   }
 
   testMove(xOffset, yOffset) {
-    for(let i = 0; i < this.piece.piece.length; i++) {
-      for(let j = 0; j < this.piece.piece[i].length; j++) {
-        if(this.piece.piece[i][j] == 1) {
-          const x = i + this.piece.x + xOffset;
-          const y = j + this.piece.y + yOffset;
-          if(x >= this.grid.length
-             || y >= this.grid[x].length
-             || this.grid[x][y] == 1) {
-            return false;
-          };
+    let passed = true;
+    this.piece.forEach((x, y, value) => {
+      if(value === 1) {
+        const gridX = x + xOffset + this.piece.position.x;
+        const gridY = y + yOffset + this.piece.position.y;
+        if(gridX >= this.grid.length
+          || gridY >= this.grid[gridX].length
+          || this.grid[gridX][gridY] == 1) {
+          passed = false;
         }
       }
-    }
-    return true;
+    });
+    return passed;
   }
 
   movePieceDown() {
     this.removePiece();
 
     if(this.testMove(0, 1)) {
-      this.piece.y += 1;
+      this.piece.position.y += 1;
       this.drawPiece();
     } else {
       this.drawPiece();
@@ -170,10 +157,22 @@ class Board {
 
   movePieceRight() {
   }
+
+  createBoard() {
+  }
+
+  forEach(func) {
+    for(let x = 0; x < this.xSize; x++) {
+      for(let y = 0; y < this.ySize; y++) {
+        if(this.grid[x] && this.grid[x][y]) func(x, y, this.grid[x][y]);
+        else func(x,y);
+      }
+    }
+  }
 }
 
 class Piece {
-  constructor() {
+  constructor(x) {
     const pieces = [
       [ // L
         [0, 0, 0, 0],
@@ -208,14 +207,20 @@ class Piece {
       ],
     ];
 
-    this.piece = this.getRandomPiece(pieces);
-
-    this.y = 0
-    this.x = 5
+    this.gridLayout = this.getRandomPiece(pieces);
+    this.position = {x,y: 0};
   }
 
   getRandomPiece(pieces) {
     return pieces[Math.floor(Math.random() * pieces.length)];
+  }
+
+  forEach(func) {
+    for(let x = 0; x < this.gridLayout.length; x++) {
+      for(let y = 0; y < this.gridLayout[x].length; y++) {
+        func(x, y, this.gridLayout[x][y]);
+      }
+    }
   }
 }
 
