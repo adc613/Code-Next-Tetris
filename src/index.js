@@ -20,29 +20,46 @@ class Tetris {
 
   create() {
     this.board = new Board(10, 20);
-    this.board.addPiece();
-    this.board.drawPiece();
+    this.tetromino = new Tetromino(3);
     this.drawOutline();
   }
 
   update() {
     this.frame += 1;
     if(this.frame % 5 == 1) {
-      this.board.movePieceDown();
+      this.moveTetrominoDown();
     }
 
-    this.redraw();
+    this.draw();
   }
 
-  movePieces() {
+  moveTetrominoDown() {
+    if(this.board.testBoundaries(this.tetromino, 0, 1)) {
+      this.tetromino.position.y += 1;
+    } else {
+      this.board.addTetromino(this.tetromino);
+
+      this.tetromino = new Tetromino(3);
+      if(!this.board.testBoundaries(this.tetromino, 0, 0)) {
+        throw new Error("game over");
+      };
+    }
   }
 
-  redraw() {
+  draw() {
     this.clearBoxes();
 
     this.board.forEach((x, y, val) => {
-      if(val === 1) {
+      if(val == 1) {
         this.drawBox(x * this.boxSize, y * this.boxSize);
+      }
+    });
+
+    this.tetromino.forEach((x, y, val) => {
+      if(val == 1 ) {
+        const gridX = x + this.tetromino.position.x; 
+        const gridY = y + this.tetromino.position.y;
+        this.drawBox(gridX * this.boxSize, gridY * this.boxSize);
       }
     });
   }
@@ -50,9 +67,9 @@ class Tetris {
   drawOutline() {
     let box = this.game.add.graphics(this.boardLocation.x, this.boardLocation.y);
     box.lineStyle(2, 0xfffff0, 1);
-    box.lineTo(this.boxSize * 10, 0);
-    box.lineTo(this.boxSize * 10, this.boxSize * 20);
-    box.lineTo(0, this.boxSize * 20);
+    box.lineTo(this.boxSize * this.board.size.x, 0);
+    box.lineTo(this.boxSize * this.board.size.x, this.boxSize * this.board.size.y);
+    box.lineTo(0, this.boxSize * this.board.size.y);
     box.lineTo(0, 0);
     box.endFill();
   }
@@ -81,50 +98,20 @@ class Tetris {
 
 class Board {
   constructor(xSize, ySize) {
-    this.xSize = xSize;
-    this.ySize = ySize;
-    this.grid = [];
-
-    this.forEach((x, y) => {
-      if(y == 0) {
-        this.grid[x] = [];
-      }
-      this.grid[x][y] = 0;
-    });
+    this.size = {x: xSize, y: ySize};
+    this.initializeGrid();
   }
 
-  addPiece() {
-    this.piece = new Piece(3);
-  }
-
-  drawPiece() {
-    this.piece.forEach((x, y, value) => {
-      if(value == 1) {
-        const gridX = x + this.piece.position.x;
-        const gridY = y + this.piece.position.y;
-        this.grid[gridX][gridY] = 1;
-      }
-    });
-  }
-
-  removePiece() {
-    this.piece.forEach((x, y, value) => {
-      if(value == 1) {
-        const gridX = x + this.piece.position.x;
-        const gridY = y + this.piece.position.y;
-        this.grid[gridX][gridY] = 0;
-      }
-    });
-  }
-
-  testMove(xOffset, yOffset) {
+  testBoundaries(tetromino, xOffset, yOffset) {
     let passed = true;
-    this.piece.forEach((x, y, value) => {
+    tetromino.forEach((x, y, value) => {
       if(value === 1) {
-        const gridX = x + xOffset + this.piece.position.x;
-        const gridY = y + yOffset + this.piece.position.y;
-        if(gridX >= this.grid.length
-          || gridY >= this.grid[gridX].length
+        const gridX = x + xOffset + tetromino.position.x;
+        const gridY = y + yOffset + tetromino.position.y;
+        if(gridX >= this.size.x 
+          || gridY >= this.size.y
+          || gridX < 0
+          || gridY < 0
           || this.grid[gridX][gridY] == 1) {
           passed = false;
         }
@@ -133,45 +120,44 @@ class Board {
     return passed;
   }
 
-  movePieceDown() {
-    this.removePiece();
-
-    if(this.testMove(0, 1)) {
-      this.piece.position.y += 1;
-      this.drawPiece();
-    } else {
-      this.drawPiece();
-      this.addPiece();
-      if(!this.testMove(0, 0)) {
-        throw new Error("game over");
-      };
-      this.drawPiece();
-    }
+  addTetromino(tetromino) {
+    tetromino.forEach((x, y, value) => {
+      if(value == 1) {
+        const gridX = x + tetromino.position.x;
+        const gridY = y + tetromino.position.y;
+        this.setValue(gridX, gridY, 1);
+      }
+    });
   }
 
-  dropPiece() {
+  setValue(gridX, gridY, value) {
+    this.grid[gridX][gridY] = value;
   }
 
-  movePieceLeft() {
-  }
-
-  movePieceRight() {
-  }
-
-  createBoard() {
+  initializeGrid() {
+    this.grid = [];
+    this.forEach((x, y) => {
+      if(y == 0) {
+        this.grid[x] = [];
+      }
+      this.grid[x][y] = 0;
+    });
   }
 
   forEach(func) {
-    for(let x = 0; x < this.xSize; x++) {
-      for(let y = 0; y < this.ySize; y++) {
-        if(this.grid[x] && this.grid[x][y]) func(x, y, this.grid[x][y]);
-        else func(x,y);
+    for(let x = 0; x < this.size.x; x++) {
+      for(let y = 0; y < this.size.y; y++) {
+        if(this.grid[x] && this.grid[x][y]) {
+          func(x, y, this.grid[x][y]);
+        } else {
+          func(x,y);
+        }
       }
     }
   }
 }
 
-class Piece {
+class Tetromino {
   constructor(x) {
     const pieces = [
       [ // L
@@ -179,22 +165,22 @@ class Piece {
         [1, 0, 0, 0],
         [1, 0, 0, 0],
         [1, 1, 0, 0],
-      ], [ // L inverted
+      ], [ // J
         [0, 0, 0, 0],
         [0, 1, 0, 0],
         [0, 1, 0, 0],
         [1, 1, 0, 0],
-      ], [ // long
+      ], [ // I
         [1, 0, 0, 0],
         [1, 0, 0, 0],
         [1, 0, 0, 0],
         [1, 0, 0, 0],
+      ], [ // S
+        [0, 0, 0, 0],
+        [1, 0, 0, 0],
+        [1, 1, 0, 0],
+        [0, 1, 0, 0],
       ], [ // Z
-        [0, 0, 0, 0],
-        [1, 0, 0, 0],
-        [1, 1, 0, 0],
-        [0, 1, 0, 0],
-      ], [ // Z inverted
         [0, 0, 0, 0],
         [0, 1, 0, 0],
         [1, 1, 0, 0],
@@ -204,15 +190,16 @@ class Piece {
         [1, 0, 0, 0],
         [1, 1, 0, 0],
         [1, 0, 0, 0],
+      ], [ /// O
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [1, 1, 0, 0],
+        [1, 1, 0, 0],
       ],
     ];
 
-    this.gridLayout = this.getRandomPiece(pieces);
+    this.gridLayout = getRandomValue(pieces);
     this.position = {x,y: 0};
-  }
-
-  getRandomPiece(pieces) {
-    return pieces[Math.floor(Math.random() * pieces.length)];
   }
 
   forEach(func) {
@@ -222,6 +209,10 @@ class Piece {
       }
     }
   }
+}
+
+function getRandomValue(values) {
+  return values[Math.floor(Math.random() * values.length)];
 }
 
 new Tetris();
